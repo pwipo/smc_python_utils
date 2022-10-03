@@ -1,7 +1,7 @@
 import base64
 
 import SMCApi
-import enum as Enum
+from enum import Enum
 from typing import List, Optional
 
 
@@ -24,18 +24,27 @@ def isBytes(message):
 
 
 def getNumber(message):
-    # type: (SMCApi.IMessage) -> Optional[SMCApi.INumber]
-    return isNumber(message) if message.getValue() else None
+    # type: (SMCApi.IMessage) -> Optional[int or long or float]
+    if isNumber(message):
+        return message.getValue()
+    else:
+        None
 
 
 def getString(message):
     # type: (SMCApi.IMessage) -> Optional[str]
-    return isString(message) if message.getValue() else None
+    if isString(message):
+        return message.getValue()
+    else:
+        None
 
 
 def getBytes(message):
     # type: (SMCApi.IMessage) -> Optional[bytes]
-    return isBytes(message) if message.getValue() else None
+    if isBytes(message):
+        return message.getValue()
+    else:
+        None
 
 
 def toString(message):
@@ -79,29 +88,45 @@ def hasData(command):
     return len(command.getActions()) > 0 and any(not hasDataInAction(action) for action in command.getActions())
 
 
-class ObjectType(Enum):
-    __order__ = 'OBJECT_ARRAY OBJECT_ELEMENT OBJECT_ELEMENT_SIMPLE VALUE_ANY STRING BYTE SHORT INTEGER LONG FLOAT DOUBLE BIG_INTEGER BIG_DECIMAL BYTES'
-    OBJECT_ARRAY = 0
-    OBJECT_ELEMENT = 1
-    OBJECT_ELEMENT_SIMPLE = 2
-    VALUE_ANY = 3
-    STRING = 4
-    BYTE = 5
-    SHORT = 6
-    INTEGER = 7
-    LONG = 8
-    FLOAT = 9
-    DOUBLE = 10
-    BIG_INTEGER = 11
-    BIG_DECIMAL = 12
-    BYTES = 13
+# class ObjectType(Enum):
+#     __order__ = 'OBJECT_ARRAY OBJECT_ELEMENT OBJECT_ELEMENT_SIMPLE VALUE_ANY STRING BYTE SHORT INTEGER LONG FLOAT DOUBLE BIG_INTEGER BIG_DECIMAL BYTES'
+#     OBJECT_ARRAY = 0
+#     OBJECT_ELEMENT = 1
+#     OBJECT_ELEMENT_SIMPLE = 2
+#     VALUE_ANY = 3
+#     STRING = 4
+#     BYTE = 5
+#     SHORT = 6
+#     INTEGER = 7
+#     LONG = 8
+#     FLOAT = 9
+#     DOUBLE = 10
+#     BIG_INTEGER = 11
+#     BIG_DECIMAL = 12
+#     BYTES = 13
+ObjectType = Enum('OBJECT_ARRAY', 'OBJECT_ELEMENT', 'OBJECT_ELEMENT_SIMPLE', 'VALUE_ANY', 'STRING', 'BYTE', 'SHORT', 'INTEGER', 'LONG', 'FLOAT',
+                  'DOUBLE', 'BIG_INTEGER', 'BIG_DECIMAL', 'BYTES')
+ObjectType.OBJECT_ARRAY.value = 0
+ObjectType.OBJECT_ELEMENT.value = 1
+ObjectType.OBJECT_ELEMENT_SIMPLE.value = 2
+ObjectType.VALUE_ANY.value = 3
+ObjectType.STRING.value = 4
+ObjectType.BYTE.value = 5
+ObjectType.SHORT.value = 6
+ObjectType.INTEGER.value = 7
+ObjectType.LONG.value = 8
+ObjectType.FLOAT.value = 9
+ObjectType.DOUBLE.value = 10
+ObjectType.BIG_INTEGER.value = 11
+ObjectType.BIG_DECIMAL.value = 12
+ObjectType.BYTES.value = 13
 
 
-class ObjectField:
-    def __init__(self, name, value):
+class ObjectField(object):
+    def __init__(self, name, value, type=None):
         # type: (str, object) -> None
         self.name = name
-        self.type = None
+        self.type = type
         self.value = value
         self.setValue(value)
 
@@ -109,46 +134,61 @@ class ObjectField:
         # type: (object) -> None
         if value is None:
             raise ValueError("value is None")
-        if type(value) is ObjectArray:
+        self.value = value
+        valueType = type(value)
+        if valueType is ObjectArray:
             self.type = ObjectType.OBJECT_ARRAY
-        elif type(value) is ObjectElement:
-            self.type = value.isSimple() if ObjectType.OBJECT_ELEMENT_SIMPLE else ObjectType.OBJECT_ELEMENT
-        elif type(value) is SMCApi.IValue:
-            self.type = ObjectType[value.getType()]
-        elif type(value) is str:
+        elif valueType is ObjectElement:
+            if value.isSimple():
+                self.type = ObjectType.OBJECT_ELEMENT_SIMPLE
+            else:
+                self.type = ObjectType.OBJECT_ELEMENT
+        elif valueType is SMCApi.IValue:
+            self.type = ObjectType._values[ObjectType._keys.index(value.getType())]
+        elif valueType is str or valueType is unicode:
             self.type = ObjectType.STRING
-        elif type(value) is bytearray:
+        elif valueType is bytearray:
             self.type = ObjectType.BYTES
-        elif type(value) is int:
+        elif valueType is int:
             self.type = ObjectType.INTEGER
-        elif type(value) is long:
+        elif valueType is long:
             self.type = ObjectType.LONG
-        elif type(value) is float:
+        elif valueType is float:
             self.type = ObjectType.DOUBLE
         else:
-            raise ValueError("wrong type")
-        self.value = value
+            doubleValueFunc = getattr(value, "doubleValue", None)
+            if callable(doubleValueFunc):
+                self.type = ObjectType.DOUBLE
+                self.value = doubleValueFunc()
+            else:
+                raise ValueError("wrong type {}".format(valueType))
 
     def isSimple(self):
         # type: () -> bool
         return ObjectType.OBJECT_ARRAY != type and ObjectType.OBJECT_ELEMENT != type and ObjectType.OBJECT_ELEMENT_SIMPLE != type
 
 
-class ObjectElement:
+class ObjectElement(object):
     def __init__(self, fields=None):
         # type: (List[ObjectField]) -> None
-        self.fields = fields is not None if list(fields) else []
+        if fields is not None:
+            self.fields = list(fields)
+        else:
+            self.fields = []
 
     def isSimple(self):
         # type: () -> bool
         return False
 
     def findField(self, name):
-        # type: (str) -> ObjectField
-        return next((f for f in self.fields if f.name == name), None)
+        # type: (str) -> Optional[ObjectField]
+        for f in self.fields:
+            if f.name == name:
+                return f
+        return None
 
 
-class ObjectArray:
+class ObjectArray(object):
     def __init__(self, type=ObjectType.OBJECT_ELEMENT, objects=None):
         # type: (ObjectType, List[object]) -> None
         self.type = type
@@ -256,17 +296,26 @@ def isBytesField(field):
 
 def getNumberField(field):
     # type: (ObjectField) -> Optional[int or float]
-    return isNumberField(field) if field.value else None
+    if isNumberField(field):
+        return field.value
+    else:
+        return None
 
 
 def getStringField(field):
     # type: (ObjectField) -> Optional[str]
-    return isStringField(field) if field.value else None
+    if isStringField(field):
+        return field.value
+    else:
+        return None
 
 
 def getBytesField(field):
     # type: (ObjectField) -> Optional[bytes]
-    return isBytesField(field) if field.value else None
+    if isBytesField(field):
+        return field.value
+    else:
+        return None
 
 
 def toStringField(field):
@@ -323,18 +372,20 @@ def deserializeToObject(messages):
     :return:
     """
     objectArray = ObjectArray()
+    if messages is None or len(messages) < 2:
+        return objectArray
     message = messages[0]
     typeId = getNumber(message)
-    if typeId in None:
+    if typeId is None:
         return objectArray
     messages.pop(0)
-    type = ObjectType[typeId.intValue()]
+    type = ObjectType[typeId]
     message = messages[0]
     size = getNumber(message)
-    if typeId in None:
+    if typeId is None:
         return objectArray
     messages.pop(0)
-    count = size.intValue()
+    count = size
     objectArray = ObjectArray(type)
 
     try:
@@ -345,12 +396,14 @@ def deserializeToObject(messages):
             for i in range(count):
                 objectArray.add(deserializeToObjectElement(messages))
         elif type == ObjectType.OBJECT_ELEMENT_SIMPLE:
+            if messages is None or len(messages) < 1:
+                return objectArray
             message = messages[0]
             countFields = getNumber(message)
             if countFields is not None:
                 messages.pop(0)
                 for i in range(count):
-                    objectArray.add(deserializeToObjectElement(messages, countFields.intValue()))
+                    objectArray.add(deserializeToObjectElement(messages, countFields))
         else:
             for i in range(count):
                 objectArray.add(messages.pop(0).getValue())
@@ -364,13 +417,15 @@ def deserializeToObjectElement(messages, countFields=-1):
     objectElement = ObjectElement()
     message = None
     count = -1
+    if messages is None or len(messages) < 1:
+        return objectElement
     if countFields < 0:
         message = messages[0]
         size = getNumber(message)
         if size is None:
             return objectElement
         messages.pop(0)
-        count = size.intValue()
+        count = size
     else:
         count = countFields
 
@@ -386,20 +441,20 @@ def deserializeToObjectElement(messages, countFields=-1):
                 if typeId is None:
                     break
                 messages.pop(0)
-                type = ObjectType[typeId.intValue()]
+                type = ObjectType[typeId]
 
             if type == ObjectType.OBJECT_ARRAY:
-                objectElement.fields.add(ObjectField(fieldName, deserializeToObject(messages)))
+                objectElement.fields.append(ObjectField(fieldName, deserializeToObject(messages)))
             elif type == ObjectType.OBJECT_ELEMENT:
-                objectElement.fields.add(ObjectField(fieldName, deserializeToObjectElement(messages)))
+                objectElement.fields.append(ObjectField(fieldName, deserializeToObjectElement(messages)))
             elif type == ObjectType.OBJECT_ELEMENT_SIMPLE:
                 message = messages[0]
                 countFields2 = getNumber(message)
                 if countFields2 is not None:
                     messages.pop(0)
-                    objectElement.fields.add(deserializeToObjectElement(messages, countFields2.intValue()))
+                    objectElement.fields.append(ObjectField(fieldName, deserializeToObjectElement(messages, countFields2)))
             else:
-                objectElement.fields.add(ObjectField(fieldName, messages.pop(0).getValue()))
+                objectElement.fields.append(ObjectField(fieldName, messages.pop(0).getValue()))
     except Exception as e:
         print(e)
 
