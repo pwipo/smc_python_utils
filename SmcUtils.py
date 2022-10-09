@@ -148,7 +148,7 @@ class ObjectField(object):
             else:
                 self.type = ObjectType.OBJECT_ELEMENT
         elif valueType is SMCApi.IValue:
-            self.type = ObjectType._values[ObjectType._keys.index(value.getType())]
+            self.type = ObjectType._values[ObjectType._keys.index(str(value.getType()))]
         elif valueType is str or valueType is unicode:
             self.type = ObjectType.STRING
         elif valueType is bytearray:
