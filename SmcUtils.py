@@ -189,7 +189,7 @@ class ObjectField(object):
 
     def isSimple(self):
         # type: () -> bool
-        return ObjectType.OBJECT_ARRAY != type and ObjectType.OBJECT_ELEMENT != type and ObjectType.OBJECT_ELEMENT_SIMPLE != type
+        return ObjectType.OBJECT_ARRAY != self.type and ObjectType.OBJECT_ELEMENT != self.type and ObjectType.OBJECT_ELEMENT_SIMPLE != self.type
 
 
 class ObjectElement(object):
