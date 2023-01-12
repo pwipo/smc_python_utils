@@ -270,11 +270,14 @@ class ObjectArray(object):
         # type: () -> bool
         isSame = True
         fieldNames = None
+        fieldTypes = None
         for obj in self.objects:
-            if fieldNames is None:
+            if fieldNames is None or fieldTypes is None:
                 fieldNames = []
+                fieldTypes = []
                 for field in obj.fields:
                     fieldNames.append(field.name)
+                    fieldTypes.append(field.type)
             else:
                 if len(fieldNames) != len(obj.fields):
                     isSame = False
@@ -282,6 +285,9 @@ class ObjectArray(object):
                 sameFields = True
                 for i in range(len(fieldNames)):
                     if fieldNames[i] != obj.fields[i].name:
+                        sameFields = False
+                        break
+                    if fieldTypes[i] != obj.fields[i].type:
                         sameFields = False
                         break
                 if not sameFields:
