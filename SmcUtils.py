@@ -690,12 +690,12 @@ def serializeFromObject(objectArray):
     if objectArray is None:
         return result
     count = len(objectArray.objects)
+    result.append(objectArray.type.index)
+    result.append(count)
     if count == 0:
         return result
 
     if objectArray.type == ObjectType.OBJECT_ARRAY:
-        result.append(objectArray.type.index)
-        result.append(count)
         for obj in objectArray.objects:
             result.extend(serializeFromObject(obj))
     elif objectArray.type == ObjectType.OBJECT_ELEMENT:
@@ -705,15 +705,10 @@ def serializeFromObject(objectArray):
             objectElement = objectArray.objects[0]
             for field in objectElement.fields:
                 definedFields.append(ObjectValuePrivate(field.name, field.type))
-            result.append(ObjectTypePrivate.OBJECT_ELEMENT_OPTIMIZED.index)
-            result.append(count)
-            result.append(len(definedFields))
+            result = [ObjectTypePrivate.OBJECT_ELEMENT_OPTIMIZED.index, count, len(definedFields)]
             for field in definedFields:
                 result.append(field.name)
                 result.append(field.type.index)
-        else:
-            result.append(objectArray.type.index)
-            result.append(count)
         for obj in objectArray.objects:
             result.extend(serializeFromObjectElement(obj, False, definedFields))
     elif objectArray.type == ObjectType.OBJECT_ELEMENT_SIMPLE:
@@ -723,14 +718,10 @@ def serializeFromObject(objectArray):
             objectElement = objectArray.objects[0]
             for field in objectElement.fields:
                 definedFields.append(ObjectValuePrivate(field.name, field.type))
-            result.append(ObjectTypePrivate.OBJECT_ELEMENT_SIMPLE_OPTIMIZED.index)
-            result.append(count)
-            result.append(len(definedFields))
+            result = [ObjectTypePrivate.OBJECT_ELEMENT_SIMPLE_OPTIMIZED.index, count, len(definedFields)]
             for field in definedFields:
                 result.append(field.name)
         else:
-            result.append(objectArray.type.index)
-            result.append(count)
             if count > 0:
                 result.append(len(objectArray.objects[0].fields))
             else:
@@ -738,8 +729,6 @@ def serializeFromObject(objectArray):
         for obj in objectArray.objects:
             result.extend(serializeFromObjectElement(obj, True, definedFields))
     else:
-        result.append(objectArray.type.index)
-        result.append(count)
         for obj in objectArray.objects:
             result.append(obj)
     return result
