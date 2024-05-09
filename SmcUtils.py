@@ -523,7 +523,9 @@ def deserializeToObject(messages, silent=True):
     :param messages:
     :return:
     """
-    message = messages[0]
+    message = None
+    if messages and len(messages) > 0:
+        message = messages[0]
     if isObjectArray(message):
         return getObjectArray(messages.pop(0))
     objectArray = SMCApi.ObjectArray()
