@@ -1068,7 +1068,7 @@ def getObjectType(value):
     valueType = type(value)
     if value is None:
         return None
-    if valueType == SMCApi.ObjectType.VALUE_ANY:
+    if valueType is SMCApi.ObjectElement:
         return SMCApi.ObjectType.OBJECT_ELEMENT
     else:
         return convertToObjectType(getValueTypeObject(value))
@@ -1409,3 +1409,45 @@ def toList(objectArray):
     for i in range(objectArray.size()):
         list.append(objectArray.get(i))
     return list
+
+
+def convertFromObjectArray(objectArray, silent):
+    # type: (SMCApi.ObjectArray, bool) -> List[object]
+    result = []
+    if objectArray is None or type(objectArray) is not SMCApi.ObjectArray or objectArray.size() == 0:
+        return result
+    try:
+        if objectArray.isSimple():
+            result = toList(objectArray)
+        elif isArrayContainArrays(objectArray):
+            for i in range(objectArray.size()):
+                arr = objectArray.get(i)  # type: SMCApi.ObjectArray
+                if arr.isSimple():
+                    result.append(toList(arr))
+        elif isArrayContainObjectElements(objectArray):
+            result = filter(lambda o: o is not None, map(lambda o: convertFromObjectElement(o, silent), toList(objectArray)))
+    except Exception as e:
+        if not silent:
+            raise Exception(e)
+    return result
+
+
+def convertFromObjectElement(objectElement, silent):
+    # type: (SMCApi.ObjectElement, bool) -> object
+    result = {}
+    if objectElement is None or type(objectElement) is not SMCApi.ObjectElement:
+        return result
+    try:
+        for field in objectElement.getFields():
+            typev = field.getType()
+            value = field.getValue()
+            if value is not None:
+                if typev == SMCApi.ObjectType.OBJECT_ARRAY:
+                    value = convertFromObjectArray(value, silent)
+                elif typev == SMCApi.ObjectType.OBJECT_ELEMENT:
+                    value = convertFromObjectElement(value, silent)
+            setattr(result, field.getName(), value)
+    except Exception as e:
+        if not silent:
+            raise Exception(e)
+    return result
