@@ -1390,7 +1390,7 @@ def executor(configurationTool, executionContextTool, id, messages, func):
 
 
 def processMessagesAll(configurationTool, executionContextTool, func):
-    # type: (SMCApi.ConfigurationTool, SMCApi.ExecutionContextTool, Callable[[int, object], None]) -> None
+    # type: (SMCApi.ConfigurationTool, SMCApi.ExecutionContextTool, Callable[[int, List[List[SMCApi.IMessage]]], None]) -> None
     data = []
     for i in range(executionContextTool.countSource()):
         action = getLastActionWithData(executionContextTool.getMessages(i))
