@@ -1273,7 +1273,7 @@ def executeAndGetMessages(executionContextTool, id, params):
 def executeAndGet(executionContextTool, id, params):
     # type: (SMCApi.ExecutionContextTool, int, List) -> List[SMCApi.IAction]
     executionContextTool.getFlowControlTool().executeNow(SMCApi.CommandType.EXECUTE, id, params)
-    return executionContextTool.getFlowControlTool().getMessagesFromExecuted(id)
+    return executionContextTool.getFlowControlTool().getMessagesFromExecuted(0, id)
 
 
 def executeParallelAndGetArrayElements(executionContextTool, id, params):
