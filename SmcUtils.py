@@ -1431,10 +1431,16 @@ def convertFromObjectArray(objectArray, silent):
             raise Exception(e)
     return result
 
+class ObjectDict(dict):
+    def __getattr__(self, key):
+        return self[key]
+
+    def __setattr__(self, key, value):
+        self[key] = value
 
 def convertFromObjectElement(objectElement, silent):
     # type: (SMCApi.ObjectElement, bool) -> object
-    result = {}
+    result = ObjectDict()
     if objectElement is None or type(objectElement) is not SMCApi.ObjectElement:
         return result
     try:
