@@ -1401,6 +1401,14 @@ def processMessagesAll(configurationTool, executionContextTool, func):
     executor(configurationTool, executionContextTool, -1, data, func)
 
 
+class ObjectDict(dict):
+    def __getattr__(self, key):
+        return self[key]
+
+    def __setattr__(self, key, value):
+        self[key] = value
+
+
 def toList(objectArray):
     # type: (SMCApi.ObjectArray) -> List[SMCApi.ObjectElement]
     list = []
@@ -1430,14 +1438,6 @@ def convertFromObjectArray(objectArray, silent):
         if not silent:
             raise Exception(e)
     return result
-
-
-class ObjectDict(dict):
-    def __getattr__(self, key):
-        return self[key]
-
-    def __setattr__(self, key, value):
-        self[key] = value
 
 
 def convertFromObjectElement(objectElement, silent):
