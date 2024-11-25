@@ -1412,7 +1412,7 @@ def toList(objectArray):
 
 
 def convertFromObjectArray(objectArray, silent):
-    # type: (SMCApi.ObjectArray, bool) -> List[object]
+    # type: (SMCApi.ObjectArray, bool) -> List[ObjectDict]
     result = []
     if objectArray is None or type(objectArray) is not SMCApi.ObjectArray or objectArray.size() == 0:
         return result
@@ -1431,6 +1431,7 @@ def convertFromObjectArray(objectArray, silent):
             raise Exception(e)
     return result
 
+
 class ObjectDict(dict):
     def __getattr__(self, key):
         return self[key]
@@ -1438,8 +1439,9 @@ class ObjectDict(dict):
     def __setattr__(self, key, value):
         self[key] = value
 
+
 def convertFromObjectElement(objectElement, silent):
-    # type: (SMCApi.ObjectElement, bool) -> object
+    # type: (SMCApi.ObjectElement, bool) -> ObjectDict
     result = ObjectDict()
     if objectElement is None or type(objectElement) is not SMCApi.ObjectElement:
         return result
