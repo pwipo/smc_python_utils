@@ -893,14 +893,14 @@ def hasErrors(command):
     # type: (SMCApi.ICommand) -> bool
     if command is None:
         return False
-    return len(command.getActions()) > 0 and any(not hasErrorsInAction(action) for action in command.getActions())
+    return len(command.getActions()) > 0 and any(hasErrorsInAction(action) for action in command.getActions())
 
 
 def hasData(command):
     # type: (SMCApi.ICommand) -> bool
     if command is None:
         return False
-    return len(command.getActions()) > 0 and any(not hasDataInAction(action) for action in command.getActions())
+    return len(command.getActions()) > 0 and any(hasDataInAction(action) for action in command.getActions())
 
 
 def hasErrorsInAction(action):
