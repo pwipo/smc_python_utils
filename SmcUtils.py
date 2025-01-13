@@ -3,6 +3,7 @@ created by Nikolay V. Ulyanov (ulianownv@mail.ru)
 http://www.smcsystem.ru
 """
 import base64
+import datetime
 import sys
 import time
 import traceback
@@ -1419,7 +1420,7 @@ def toList(objectArray):
     return list
 
 
-def convertFromObjectArray(objectArray, silent):
+def convertFromObjectArray(objectArray, silent=True):
     # type: (SMCApi.ObjectArray, bool) -> List[ObjectDict]
     result = []
     if objectArray is None or type(objectArray) is not SMCApi.ObjectArray or objectArray.size() == 0:
@@ -1440,7 +1441,7 @@ def convertFromObjectArray(objectArray, silent):
     return result
 
 
-def convertFromObjectElement(objectElement, silent):
+def convertFromObjectElement(objectElement, silent=True):
     # type: (SMCApi.ObjectElement, bool) -> ObjectDict
     result = ObjectDict()
     if objectElement is None or type(objectElement) is not SMCApi.ObjectElement:
@@ -1459,3 +1460,89 @@ def convertFromObjectElement(objectElement, silent):
         if not silent:
             raise Exception(e)
     return result
+
+
+def convertToObjectArray(entries, silent=True):
+    # type: (list, bool) -> SMCApi.ObjectArray
+    result = SMCApi.ObjectArray()
+    type = None  # type: SMCApi.ObjectType
+    try:
+        for value in entries:
+            if isinstance(value, list):
+                if type and type != SMCApi.ObjectType.OBJECT_ARRAY:
+                    continue
+                if not type:
+                    type = SMCApi.ObjectType.OBJECT_ARRAY
+                result.add(convertToObjectArray(value, silent))
+            elif isinstance(value, dict) or hasattr(value, '__class__'):
+                if type and type != SMCApi.ObjectType.OBJECT_ELEMENT:
+                    continue
+                if not type:
+                    type = SMCApi.ObjectType.OBJECT_ELEMENT
+                result.add(convertToObjectElement(value, silent))
+            else:
+                if type and type != SMCApi.ObjectType.VALUE_ANY:
+                    continue
+                if not type:
+                    type = SMCApi.ObjectType.VALUE_ANY
+                result.add(value)
+    except Exception as e:
+        if not silent:
+            raise Exception(e)
+    return result
+
+
+def convertToObjectElement(entry, silent=True):
+    # type: (dict or object, bool) -> Optional[SMCApi.ObjectElement]
+    element = None
+    if not entry or not isinstance(entry, dict):
+        return element
+    fields = []  # type: [SMCApi.ObjectField]
+    try:
+        if isinstance(entry, dict):
+            for key in entry:
+                value = entry[key]
+                field = convertToObjectField(key, value, silent)
+                if field:
+                    fields.append(field)
+        elif hasattr(entry, '__class__'):
+            for key in dir(entry):
+                if key in entry and not key.startswith('__'):
+                    value = entry[key]
+                    field = convertToObjectField(key, value, silent)
+                    if field:
+                        fields.append(field)
+    except Exception as e:
+        if not silent:
+            raise Exception(e)
+    if len(fields) > 0:
+        element = SMCApi.ObjectElement(fields)
+    return element
+
+
+def convertToObjectField(key, value, silent=True):
+    # type: (str, object, bool) -> Optional[SMCApi.ObjectField]
+    field = None  # type: SMCApi.ObjectField
+    if key is None or value is None:
+        return field
+    # if key in entry and not key.startswith('__'):
+    try:
+        if isinstance(value, list):
+            field = SMCApi.ObjectField(key, convertToObjectArray(value, silent))
+        elif isinstance(value, dict):
+            field = SMCApi.ObjectField(key, convertToObjectElement(value, silent))
+        elif isinstance(value, unicode) or isinstance(value, str) or isinstance(value, int) or isinstance(value, long) or isinstance(value, float) or isinstance(value, bool):
+            field = SMCApi.ObjectField(key, value)
+        elif isinstance(value, datetime.datetime):
+            field = SMCApi.ObjectField(key, int(time.mktime(value.utctimetuple()) * 1000 + value.microsecond / 1000))
+        elif isinstance(value, time.struct_time):
+            dt = datetime.datetime(*value[:6])
+            field = SMCApi.ObjectField(key, int(time.mktime(dt.utctimetuple()) * 1000 + dt.microsecond / 1000))
+        elif hasattr(value, '__class__'):
+            field = SMCApi.ObjectField(key, convertToObjectElement(value, silent))
+        else:
+            field = SMCApi.ObjectField(key, str(value))
+    except Exception as e:
+        if not silent:
+            raise Exception(e)
+    return field
