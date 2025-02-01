@@ -1318,11 +1318,11 @@ def getErrorMessageOrClassName(e):
     ex_type, ex_value, ex_traceback = sys.exc_info()
     # repr(e)
     if ex_value:
-        return ex_value
+        return str(ex_value)
     elif ex_traceback:
-        return ex_value
+        return "{} {}".format(str(ex_type), str(ex_traceback))
     else:
-        return ""
+        return str(ex_type)
 
 
 def getMessages(executionContextTool):
